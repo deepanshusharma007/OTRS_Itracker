@@ -1,0 +1,12 @@
+Ticket ID,Title,Raised At,Description,Remark,Severity,Priority,Raised By Id,Updated At,Bucket,Status,File Paths
+435,2131231,2025-02-05 15:34:03,eqwqew,hello resolution,S1,P1,27,None,L1,open,[]
+
+Ticket Resolutions:
+Resolution Description: hello resolution
+Supporting Files: []
+
+
+Audit Logs:
+Event Description: Ticket created with number:435 and assigned to group L1.
+Event DateTime: 2025-02-05 15:34:03
+

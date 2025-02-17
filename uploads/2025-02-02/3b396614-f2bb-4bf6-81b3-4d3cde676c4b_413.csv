@@ -1,0 +1,7 @@
+Ticket ID,Title,Raised At,Description,Remark,Severity,Priority,Raised By Id,Updated At,Bucket,Status,File Paths
+413,Backdoor introduction via registry permission change through WMI (DAMP),2025-02-02 12:53:53,This technique involves attackers using Windows Management Instrumentation (WMI) to change registry permissions, creating a backdoor to gain unauthorized access to a system. By altering the permissions, attackers can execute malicious code or maintain persistent access without being detected,None,S2,P2,26,None,L1,open,[]
+
+Audit Logs:
+Event Description: Ticket created with number:413 and assigned to group L1.
+Event DateTime: 2025-02-02 12:53:53
+
