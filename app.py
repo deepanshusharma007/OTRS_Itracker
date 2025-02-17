@@ -8,6 +8,11 @@ from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
 
+
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
+
 from close_ticket import CloseTicket
 from create_ticket import CreateTicket
 from download_document import DownloadDoc
@@ -60,9 +65,11 @@ from create_ticket_automatic import CreateTicketAutomatic
 from sla_data import Data_SLA
 from sla_update import Update_SLA
 
+from waitress import serve
+
 
 import redis
-from flask import Flask, render_template_string, request, session, redirect, url_for, make_response, render_template
+from flask import Flask, render_template_string, request, session, redirect, url_for, make_response, render_template, jsonify
 from flask_session import Session
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -75,8 +82,8 @@ mail = Mail(app)
 load_dotenv()
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://dbuserA308:Nsdl%4012345%@localhost:3306/OTRS_ticketing_db'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:root@localhost:3306/OTRS_ticketing_db'
 app.config['JWT_SECRET_KEY'] = 'mysecretkey12345'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=2)
@@ -90,7 +97,7 @@ app.config['SESSION_REDIS'] = redis.from_url(os.getenv('REDIS_URL'))
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SECRET_KEY'] = 'mysecretkey12345'
 
-
+ 
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER')
 os.makedirs(os.getenv('UPLOAD_FOLDER'), exist_ok=True)
 
@@ -113,9 +120,10 @@ api.add_resource(TicketPickup, '/api/ticket_pickup/<int:ticket_id>', methods=['P
 api.add_resource(AssignTicket, '/api/assign_ticket/<int:ticket_id>', methods=['POST'])
 api.add_resource(TicketFilters, '/api/filters', methods=['POST'])
 api.add_resource(FileUpload, '/api/file_upload', methods=['POST'])
-api.add_resource(DownloadDoc, '/api/download_document/<string:document_name>', methods=['POST'])
+api.add_resource(DownloadDoc, '/api/download_document/<string:document_name>/<int:ticket_id>', methods=['POST'])
 api.add_resource(SubmitResolution, '/api/submit_resolution/<int:ticket_id>', methods=['POST'])
 api.add_resource(CloseTicket, '/api/close_ticket/<int:ticket_id>', methods=['POST'])
+# api.add_resource(CreateTicket, '/api/create_ticket', methods=['POST'])
 api.add_resource(CreateTicket, '/api/create_ticket_manually', methods=['POST'])
 api.add_resource(CustomerDetails, '/api/customer_details', methods=['GET'])
 api.add_resource(UpdateTicketDescription, '/api/update_ticket_description/<int:ticket_id>', methods=['PUT'])
@@ -190,16 +198,53 @@ def process_reset_password(token):
 
     if user:
         user.password = hashlib.md5(str(new_password).encode('utf-8')).hexdigest()
-        user.created_at = datetime.now()
+        user.updated_at = datetime.now()
         db.session.delete(token_record)
         db.session.commit()
         return "Password reset successful"
     else:
         return "Invalid token or user not found"
 
-
-
+#@app.route('/api/create_ticket', methods=['POST'])
+#def receive_json():
+#    try:
+#        # Get JSON data from the request
+#        data = request.get_json()
+#        if not data:
+#            return jsonify({"error": "No JSON payload provided"}), 400
+#
+#        # Print the received JSON data to the console
+#        with open('received_data.txt', 'a') as file:
+#
+#            file.write(str(data))#json.dump(data, file, indent=4)  # Save the JSON in a readable format
+#
+#        print("Received JSON data:", data)
+#
+#        # Respond with a success message
+#        return jsonify({"message": "JSON received successfully", "data": data}), 200
+#    except Exception as e:
+#        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # app.run(debug=True, host='0.0.0.0')
-    app.run(debug=True)
+    #app.run(debug=True, host='127.0.0.1', port=8090)
+    # app.run(debug=True)
+    log_dir = '/data/otrs_logs'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+ 
+    # Set up logging
+    log_file = os.path.join(log_dir, 'app.log')
+    handler = TimedRotatingFileHandler(log_file, when='midnight', interval=1)
+    handler.suffix = "%Y-%m-%d"
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
+    handler.setFormatter(formatter)
+    app.logger.addHandler(handler)
+ 
+    # Set the logger to handle debug level messages
+    app.logger.setLevel(logging.DEBUG)
+ 
+    # Log a message to indicate the server is starting
+    app.logger.debug("Starting the Flask server with Waitress")
+    serve(app, host='127.0.0.1', port=8090)
+    
